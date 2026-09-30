@@ -10,6 +10,7 @@ tasks = [
 
 @app.get("/")
 def read_root():
+    """Describe this API - name, version, and available endpoints.""" 
     return {
         "name": "Task API", 
         "version": "1.0", 
@@ -18,14 +19,17 @@ def read_root():
 
 @app.get("/health")
 def health_check():
+    """Check if the server is alive"""
     return {"status": "ok"}
 
 @app.get("/tasks")
 def get_tasks():
+    """Get all tasks."""
     return tasks
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
+    """Get a single task by ID."""
     for task in tasks:
         if task["id"] == task_id:
             return task
@@ -33,12 +37,14 @@ def get_task(task_id: int):
 
 @app.post("/tasks", status_code=201)
 def create_task(task_data: dict):
+    """Create a new task with a title."""
     # Validate: title must exist and not be empty
     if "title" not in task_data or not task_data["title"] or not task_data["title"].strip():
         raise HTTPException(status_code=400, detail="Title is required and cannot be empty")
 
 @app.put("/tasks/{task_id}")
 def update_task(task_id: int, task_data: dict):
+    """Update a task's title with done status."""
     # Find the task
     for task in tasks:
         if task["id"] == task_id:
@@ -59,6 +65,7 @@ def update_task(task_id: int, task_data: dict):
 
 @app.delete("/tasks/{task_id}", status_code=204)
 def delete_task(task_id: int):
+    """Delete a task by ID."""
     for i, task in enumerate(tasks):
         if task["id"] == task_id:
             tasks.pop(i)
