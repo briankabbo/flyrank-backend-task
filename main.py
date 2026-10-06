@@ -1,12 +1,9 @@
 from fastapi import FastAPI, HTTPException
+from database import init_db
 
 app = FastAPI()
 
-tasks = [
-    {"id": 1, "title": "Get Chocolate", "done": True},
-    {"id": 2, "title": "Coffee Date", "done": False},
-    {"id": 3, "title": "Buy Gift", "done": False}
-]
+init_db()
 
 @app.get("/")
 def read_root():
@@ -25,15 +22,17 @@ def health_check():
 @app.get("/tasks")
 def get_tasks():
     """Get all tasks."""
-    return tasks
+    from database import get_all_tasks
+    return get_all_tasks()
 
 @app.get("/tasks/{task_id}")
 def get_task(task_id: int):
     """Get a single task by ID."""
-    for task in tasks:
-        if task["id"] == task_id:
-            return task
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    from database import get_task_by_id
+    task = get_task_by_id(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    return task
 
 @app.post("/tasks", status_code=201)
 def create_task(task_data: dict):
