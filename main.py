@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from database import init_db
+from database import init_db, get_all_tasks, get_task_by_id, create_task, update_task, delete_task
 
 app = FastAPI()
 
@@ -16,75 +16,55 @@ def read_root():
 
 @app.get("/health")
 def health_check():
-    """Check if the server is alive"""
+    """Check if the server is alive."""
     return {"status": "ok"}
 
 @app.get("/tasks")
-def get_tasks():
+def get_tasks_endpoint():
     """Get all tasks."""
-    from database import get_all_tasks
     return get_all_tasks()
 
 @app.get("/tasks/{task_id}")
-def get_task(task_id: int):
+def get_task_endpoint(task_id: int):
     """Get a single task by ID."""
-    from database import get_task_by_id
     task = get_task_by_id(task_id)
     if not task:
         raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
     return task
 
 @app.post("/tasks", status_code=201)
-def create_task(task_data: dict):
+def create_task_endpoint(task_data: dict):
     """Create a new task with a title."""
     # Validate: title must exist and not be empty
     if "title" not in task_data or not task_data["title"] or not task_data["title"].strip():
         raise HTTPException(status_code=400, detail="Title is required and cannot be empty")
+    
+    new_task = create_task(task_data["title"].strip())
+    return new_task
 
 @app.put("/tasks/{task_id}")
-def update_task(task_id: int, task_data: dict):
-    """Update a task's title with done status."""
-    # Find the task
-    for task in tasks:
-        if task["id"] == task_id:
-            # Validate if title is provided
-            if "title" in task_data:
-                if not task_data["title"] or not task_data["title"].strip():
-                    raise HTTPException(status_code=400, detail="Title cannot be empty")
-                task["title"] = task_data["title"].strip()
-            
-            # Update done flag if provided
-            if "done" in task_data:
-                task["done"] = task_data["done"]
-            
-            return task
+def update_task_endpoint(task_id: int, task_data: dict):
+    """Update a task's title and/or done status."""
+    # Extract title and done from request if provided
+    title = task_data.get("title")
+    done = task_data.get("done")
     
-    # Task not found
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    # Validate title if provided
+    if title is not None and (not title or not title.strip()):
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+    
+    # Update in database
+    updated_task = update_task(task_id, title.strip() if title else None, done)
+    
+    if not updated_task:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
+    
+    return updated_task
 
 @app.delete("/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int):
+def delete_task_endpoint(task_id: int):
     """Delete a task by ID."""
-    for i, task in enumerate(tasks):
-        if task["id"] == task_id:
-            tasks.pop(i)
-            return  # 204 No Content — just return empty
+    success = delete_task(task_id)
     
-    # Task not found
-    raise HTTPException(status_code=404, detail=f"Task {task_id} not found")
-    
-    # Generate next ID
-    next_id = max(task["id"] for task in tasks) + 1 if tasks else 1
-    
-    # Create new task with done = False by default
-    new_task = {
-        "id": next_id,
-        "title": task_data["title"].strip(),
-        "done": False
-    }
-    
-    # Add to list
-    tasks.append(new_task)
-    
-    # Return the created task
-    return new_task
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Task {task_id} not found")

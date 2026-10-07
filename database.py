@@ -1,5 +1,4 @@
 import sqlite3
-import os
 
 DATABASE = "tasks.db"
 
@@ -66,3 +65,59 @@ def create_task(title: str):
     task_id = cursor.lastrowid
     conn.close()
     return {"id": task_id, "title": title, "done": False}
+
+def update_task(task_id: int, title: str = None, done: bool = None):
+    """Update a task's title and/or done status."""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    # Check if task exists first
+    cursor.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return None  # Task not found
+    
+    # Build dynamic update query
+    updates = []
+    params = []
+    
+    if title is not None:
+        updates.append("title = ?")
+        params.append(title)
+    
+    if done is not None:
+        updates.append("done = ?")
+        params.append(done)
+    
+    if not updates:
+        conn.close()
+        return None  # Nothing to update
+    
+    params.append(task_id)
+    query = f"UPDATE tasks SET {', '.join(updates)} WHERE id = ?"
+    cursor.execute(query, params)
+    conn.commit()
+    
+    # Fetch and return the updated task
+    cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
+    conn.row_factory = sqlite3.Row
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def delete_task(task_id: int):
+    """Delete a task by ID."""
+    conn = sqlite3.connect(DATABASE)
+    cursor = conn.cursor()
+    
+    # Check if task exists
+    cursor.execute("SELECT id FROM tasks WHERE id = ?", (task_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False  # Task not found
+    
+    # Delete it
+    cursor.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    conn.commit()
+    conn.close()
+    return True  # Success
