@@ -69,6 +69,7 @@ def create_task(title: str):
 def update_task(task_id: int, title: str = None, done: bool = None):
     """Update a task's title and/or done status."""
     conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
     # Check if task exists first
@@ -100,7 +101,6 @@ def update_task(task_id: int, title: str = None, done: bool = None):
     
     # Fetch and return the updated task
     cursor.execute("SELECT id, title, done FROM tasks WHERE id = ?", (task_id,))
-    conn.row_factory = sqlite3.Row
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
